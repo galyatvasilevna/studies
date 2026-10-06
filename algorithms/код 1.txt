@@ -1,0 +1,224 @@
+#include <iostream>
+#include <string>
+#include <vector>
+using namespace std;
+
+// ---------- Athlete: спортсмен, живёт независимо ----------
+class Athlete {
+    string name;                       // имя
+    string sport;                      // вид спорта
+    double record;                     // рекорд
+    static int count;                  // СТАТИЧЕСКОЕ поле: счётчик спортсменов
+public:
+    Athlete(const string& n, const string& s, double r)
+        : name(n), sport(s), record(r) {
+        count++;                       // +1 при создании
+        cout << "Athlete " << name << " created\n";
+    }
+    ~Athlete() {
+        count--;                       // -1 при удалении
+        cout << "Athlete " << name << " deleted\n";
+    }
+    void print() const {
+        cout << "  " << name << " (" << sport << ", record: " << record << ")\n";
+    }
+    // СТАТИЧЕСКИЙ метод для работы со статическим полем
+    static int getCount() { return count; }
+};
+int Athlete::count = 0;                // определение статического поля вне класса
+
+// ---------- Roster: состав, агрегирует спортсменов ----------
+class Roster {
+    string teamName;
+    vector<Athlete*> athletes;         // АГРЕГАЦИЯ: только указатели
+public:
+    Roster(const string& t) : teamName(t) {
+        cout << "Roster \"" << teamName << "\" created\n";
+    }
+    ~Roster() {
+        // Спортсменов НЕ удаляем — они живут независимо!
+        cout << "Roster \"" << teamName << "\" deleted\n";
+    }
+    void addAthlete(Athlete* a) {
+        athletes.push_back(a);         // просто запоминаем адрес
+    }
+    void print() const {
+        cout << "Roster \"" << teamName << "\" (" << athletes.size() << " athletes):\n";
+        for (auto* a : athletes) a->print();
+    }
+};
+
+// ---------- main ----------
+int main() {
+    setlocale(LC_ALL, "ru");
+    // Спортсмены создаются независимо от состава
+    Athlete a1("Иванов", "плавание", 58.2);
+    Athlete a2("Петров", "бег 100м", 10.5);
+    Athlete a3("Сидоров", "прыжки", 7.8);
+
+    cout << "Athletes alive: " << Athlete::getCount() << "\n\n";
+
+    {   // состав живёт только внутри этих скобок
+        Roster team("Сборная");
+        team.addAthlete(&a1);
+        team.addAthlete(&a2);
+        team.addAthlete(&a3);
+        team.print();
+    }   // здесь roster уничтожается
+
+    // ДЕМОНСТРАЦИЯ: спортсмены всё ещё живы после уничтожения целого
+    cout << "\n-- After roster deleted --\n";
+    a1.print();
+    a2.print();
+    a3.print();
+    cout << "Athletes alive: " << Athlete::getCount() << "\n";
+
+    return 0;   // тут удаляются сами спортсмены
+}
+_________________________________
+#include <iostream>
+#include <vector>
+using namespace std;
+
+// ---------- Floor: часть здания (композиция) ----------
+class Floor {
+    int number;       // номер этажа
+    double height;    // высота
+public:
+    Floor(int n, double h) : number(n), height(h) {
+        cout << "Floor " << number << " created (h=" << height << ")\n";
+    }
+    ~Floor() {
+        cout << "Floor " << number << " deleted\n";
+    }
+};
+
+// ---------- Building: содержит этажи как поля-объекты ----------
+class Building {
+    vector<Floor> floors;      // КОМПОЗИЦИЯ: этажи внутри здания
+public:
+    Building() {
+        cout << "Building created\n";
+    }
+    ~Building() {
+        cout << "Building deleted\n";   // после этого тело — удалятся floors
+    }
+    void addFloor(int n, double h) {
+        floors.emplace_back(n, h);      // этаж создаётся внутри здания
+    }
+};
+
+// ---------- main ----------
+int main() {
+    setlocale(LC_ALL, "ru");
+    Building b;                 // создаём здание
+    b.addFloor(1, 3.0);         // добавляем этажи
+    b.addFloor(2, 3.0);
+    b.addFloor(3, 3.2);
+
+    return 0;                   // b удалится → этажи удалятся автоматически
+}
+___________________________
+#include <iostream>
+#include <vector>
+using namespace std;
+
+// ---------- Route: маршрут, живёт независимо ----------
+class Route {
+    int number;
+    static int count;                 // счётчик маршрутов
+public:
+    Route(int n) : number(n) {
+        count++;
+        cout << "Route " << number << " created\n";
+    }
+    ~Route() {
+        count--;
+        cout << "Route " << number << " deleted\n";
+    }
+    int getNumber() const { return number; }
+    static int getCount() { return count; }
+};
+int Route::count = 0;                 // определение вне класса
+
+// ---------- Bus: агрегирует маршрут ----------
+class Bus {
+    int id;
+    Route* route;                     // агрегация: указатель, не удаляем
+public:
+    Bus(int i) : id(i), route(nullptr) {
+        cout << "Bus " << id << " created\n";
+    }
+    ~Bus() {
+        cout << "Bus " << id << " deleted\n";   // Route НЕ удаляем!
+    }
+    void setRoute(Route* r) {
+        if (r == nullptr) {           // проверка на nullptr
+            cout << "Error: route is nullptr\n";
+            return;
+        }
+        route = r;
+        cout << "Bus " << id << " -> route " << route->getNumber() << "\n";
+    }
+    void print() const {
+        cout << "Bus " << id << ": ";
+        if (route) cout << "route " << route->getNumber();
+        else       cout << "no route";
+        cout << "\n";
+    }
+};
+
+// ---------- Depot: Singleton + агрегация автобусов ----------
+class Depot {
+    vector<Bus*> buses;               // агрегация
+    Depot() { cout << "Depot opened\n"; }               // приватный
+    Depot(const Depot&) = delete;                       // запрет копии
+    Depot& operator=(const Depot&) = delete;
+    static Depot* instance;
+public:
+    static Depot* getInstance() {
+        if (!instance) instance = new Depot();
+        return instance;
+    }
+    ~Depot() { cout << "Depot closed\n"; }              // Bus НЕ удаляем
+
+    void addBus(Bus* b) {
+        if (b == nullptr) {           // проверка на nullptr
+            cout << "Error: bus is nullptr\n";
+            return;
+        }
+        buses.push_back(b);
+    }
+    void print() const {
+        cout << "Depot has " << buses.size() << " bus(es):\n";
+        for (auto* b : buses) b->print();
+    }
+};
+Depot* Depot::instance = nullptr;
+
+// ---------- main ----------
+int main() {
+    Route r1(10), r2(25);                        // маршруты живут отдельно
+    Bus   b1(1), b2(2);                         // автобусы живут отдельно
+
+    b1.setRoute(&r1);
+    b2.setRoute(&r2);
+    b2.setRoute(nullptr);                        // демонстрация защиты
+
+    Depot* d1 = Depot::getInstance();
+    Depot* d2 = Depot::getInstance();
+    cout << "Singleton: d1==d2 -> " << (d1 == d2) << "\n";
+
+    d1->addBus(&b1);
+    d1->addBus(&b2);
+    d1->addBus(nullptr);                         // демонстрация защиты
+    d1->print();
+
+    cout << "Routes alive: " << Route::getCount() << "\n";
+
+    delete d1;                                   // закрываем автопарк
+    cout << "-- Buses and routes still alive --\n";
+    b1.print();
+    b2.print();
+    return 0;                                    // тут удаляются b1,b2,r1,r2
+}

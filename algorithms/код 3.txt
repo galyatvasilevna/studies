@@ -1,0 +1,145 @@
+#include <iostream>
+#include <stdexcept>
+#include <utility>
+using namespace std;
+
+template <typename T>
+class Vector {
+    T* data;   // буфер в куче
+    int sz;     // размер
+    int cap;    // ёмкость
+
+    // расширение буфера вдвое (O(n), амортизируется push_back
+    void grow() {
+        int nc = (cap == 0) ? 1 : cap * 2;
+        T* nd = new T[nc];
+        for (int i = 0; i < sz; i++) nd[i] = std::move(data[i]);
+        delete[] data;
+        data = nd;
+        cap = nc;
+    }
+
+    // быстрая сортировка диапазона [lo, hi]
+    void quickSort(int lo, int hi) {
+        if (lo >= hi) return;
+        T pivot = data[(lo + hi) / 2];
+        int i = lo, j = hi;
+        while (i <= j) {
+            while (data[i] < pivot) i++;
+            while (data[j] > pivot) j--;
+            if (i <= j) { std::swap(data[i], data[j]); i++; j--; }
+        }
+        quickSort(lo, j);
+        quickSort(i, hi);
+    }
+
+public:
+    // --- конструкторы ---
+    Vector() : data(nullptr), sz(0), cap(0) {}
+
+    explicit Vector(int n) : data(new T[n]), sz(n), cap(n) {
+        for (int i = 0; i < n; i++) data[i] = T();
+    }
+
+    // копирование (глубокое)
+    Vector(const Vector& o) : data(new T[o.cap]), sz(o.sz), cap(o.cap) {
+        for (int i = 0; i < sz; i++) data[i] = o.data[i];
+    }
+
+    // перемещение
+    Vector(Vector&& o) noexcept : data(o.data), sz(o.sz), cap(o.cap) {
+        o.data = nullptr; o.sz = o.cap = 0;
+    }
+
+    // --- деструктор ---
+    ~Vector() { delete[] data; }
+
+    // --- операторы присваивания ---
+    Vector& operator=(const Vector& o) {
+        if (this != &o) { Vector t(o); swap(t); }   // copy-and-swap + защита
+        return *this;
+    }
+    Vector& operator=(Vector&& o) noexcept {
+        if (this != &o) {
+            delete[] data;
+            data = o.data; sz = o.sz; cap = o.cap;
+            o.data = nullptr; o.sz = o.cap = 0;
+        }
+        return *this;
+    }
+
+    // --- обмен ---
+    void swap(Vector& o) noexcept {
+        std::swap(data, o.data);
+        std::swap(sz, o.sz);
+        std::swap(cap, o.cap);
+    }
+
+    // --- доступ по индексу с проверкой ---
+    T& operator[](int i) {
+        if (i < 0 || i >= sz) throw out_of_range("index out of range");
+        return data[i];
+    }
+    const T& operator[](int i) const {
+        if (i < 0 || i >= sz) throw out_of_range("index out of range");
+        return data[i];
+    }
+
+    // --- базовые методы ---
+    int size() const { return sz; }
+
+    void push_back(const T& v) {
+        if (sz >= cap) grow();
+        data[sz++] = v;
+    }
+    void pop_back() {
+        if (sz == 0) throw underflow_error("Vector is empty");
+        sz--;
+    }
+
+    // --- итераторы ---
+    T* begin() { return data; }
+    T* end() { return data + sz; }
+    const T* begin() const { return data; }
+    const T* end()   const { return data + sz; }
+
+    // --- продвинутый уровень: сортировка ---
+    void sort() { quickSort(0, sz - 1); }
+};
+
+int main() {
+    // 1. push_back + range-for
+    Vector<int> v;
+    for (int x : {5, 2, 9, 1, 7, 3, 8, 4, 6, 0}) v.push_back(x);
+    cout << "size = " << v.size() << "\n";
+
+    // 2. сортировка
+    v.sort();
+    cout << "sorted: ";
+    for (int x : v) cout << x << " ";
+    cout << "\n";
+
+    // 3. копирование (правило трёх)
+    Vector<int> c = v;
+    c.push_back(100);
+    cout << "copy size = " << c.size() << ", orig size = " << v.size() << "\n";
+
+    // 4. перемещение (правило пяти)
+    Vector<int> m = std::move(c);
+    cout << "moved size = " << m.size() << ", after-move c size = " << c.size() << "\n";
+
+    // 5. pop_back
+    v.pop_back();
+    cout << "after pop_back size = " << v.size() << "\n";
+
+    // 6. обработка исключения
+    try {
+        Vector<int> s(2);
+        cout << s[5] << "\n";
+    }
+    catch (const out_of_range& e) {
+        cout << "caught: " << e.what() << "\n";
+    }
+
+    return 0;
+}
