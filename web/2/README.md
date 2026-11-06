@@ -1,4 +1,3 @@
-```markdown
 # Лабораторная работа №2  
 ## Модели. CRUD
 
@@ -112,4 +111,4 @@
 ---
 
 **Ссылка на репозиторий:** [https://github.com/galyatvasilevna/studies](https://github.com/galyatvasilevna/studies)
-```
+
