@@ -1,4 +1,3 @@
-```markdown
 # Лабораторная работа №3  
 ## Шаблоны. Админка Django
 
@@ -183,4 +182,4 @@ class NewsConfig(AppConfig):
 ---
 
 **Ссылка на репозиторий:** [https://github.com/galyatvasilevna/studies](https://github.com/galyatvasilevna/studies)
-```
+
