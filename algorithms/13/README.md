@@ -1,4 +1,3 @@
-```markdown
 # Лабораторная работа №13  
 ## Алгоритмы Прима и Краскала. Минимальное остовное дерево
 
@@ -292,4 +291,3 @@ O(E log E) из-за сортировки рёбер. Операции DSU за�
 
 **Ссылка на репозиторий:**  
 [https://github.com/galyatvasilevna/studies](https://github.com/galyatvasilevna/studies)
-```
